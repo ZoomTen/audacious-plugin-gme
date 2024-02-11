@@ -9,6 +9,17 @@ The Game_Music_Emu backend has been updated to version 0.6.x from the [libgme](h
 ## Changes so far
 
 - Update from Blargg's GME 0.5.2 to libgme indev 0.6.4
+- Library name: `console` -> `gme`
+- Input plugin name: `Game Console Music Decoder` -> `Game Music Emu Plugin`
+
+## Build instructions
+
+```sh
+meson build
+cd build
+ninja
+sudo ninja install
+```
 
 ## Licenses
 
@@ -52,3 +63,9 @@ Audacious 4.3.1 on Fedora Linux 39 x86_64
 
 - Pick between different emulator backends (Nuked/Gens/MAME)
 - A channel mixer, tempo adjuster, etc. etc., if possible
+
+**Internal:**
+
+- Use "proper" defines
+- Add autodetection for things like zlib
+- Make compile-time configurables for each system, if possible

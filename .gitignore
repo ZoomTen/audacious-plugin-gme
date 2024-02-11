@@ -20,3 +20,4 @@ extra.mk
 *.diff
 *.bundle
 *.moc
+.cache/

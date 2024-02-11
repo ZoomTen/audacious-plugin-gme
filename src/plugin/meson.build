@@ -1,52 +1,81 @@
 gme_sources = [
-  'Ay_Apu.cc',
-  'Ay_Cpu.cc',
-  'Ay_Emu.cc',
+# Basic stuff
   'Blip_Buffer.cc',
   'Classic_Emu.cc',
   'Data_Reader.cc',
   'Dual_Resampler.cc',
   'Effects_Buffer.cc',
   'Fir_Resampler.cc',
-  'Gbs_Emu.cc',
-  'Gb_Apu.cc',
-  'Gb_Cpu.cc',
-  'Gb_Oscs.cc',
   'gme.cc',
   'Gme_File.cc',
-  'Gym_Emu.cc',
-  'Gzip_Reader.cc',
-  'Hes_Apu.cc',
-  'Hes_Cpu.cc',
-  'Hes_Emu.cc',
-  'Kss_Cpu.cc',
-  'Kss_Emu.cc',
-  'Kss_Scc_Apu.cc',
   'M3u_Playlist.cc',
   'Multi_Buffer.cc',
   'Music_Emu.cc',
+
+# AY
+  'Ay_Apu.cc',
+  'Ay_Cpu.cc',
+  'Ay_Emu.cc',
+
+# YM2612, TODO: pick your backend!
+  'Ym2612_Nuked.cc',
+  #'Ym2612_MAME.cc',
+  #'Ym2612_GENS.cc',
+
+# SMS / GG
+  'Sms_Apu.cc',
+
+# Game Boy
+  'Gb_Apu.cc',
+  'Gb_Cpu.cc',
+  'Gb_Oscs.cc',
+  'Gbs_Emu.cc',
+
+# GYM support
+  'Gym_Emu.cc',
+
+# HES
+  'Hes_Apu.cc',
+  'Hes_Cpu.cc',
+  'Hes_Emu.cc',
+
+# KSS = AY + TI-something
+  'Kss_Cpu.cc',
+  'Kss_Emu.cc',
+  'Kss_Scc_Apu.cc',
+
+# NES
   'Nes_Apu.cc',
   'Nes_Cpu.cc',
   'Nes_Fme7_Apu.cc',
   'Nes_Namco_Apu.cc',
   'Nes_Oscs.cc',
   'Nes_Vrc6_Apu.cc',
-  'Nsfe_Emu.cc',
+  'Nes_Fds_Apu.cc',
+  'Nes_Vrc7_Apu.cc',
+  'ext/emu2413.c',
+  'ext/panning.c',
   'Nsf_Emu.cc',
+
+# NSFE support
+  'Nsfe_Emu.cc',
+
+# SAP
   'Sap_Apu.cc',
   'Sap_Cpu.cc',
   'Sap_Emu.cc',
-  'Sms_Apu.cc',
+
+# SNES
   'Snes_Spc.cc',
   'Spc_Cpu.cc',
   'Spc_Dsp.cc',
   'Spc_Emu.cc',
   'Spc_Filter.cc',
+
+# VGM support
   'Vgm_Emu.cc',
   'Vgm_Emu_Impl.cc',
-  'Ym2413_Emu.cc',
-  'Ym2612_Emu.cc',
-  'Zlib_Inflater.cc'
+  'Ym2413_Emu.cc'
 ]
 
 

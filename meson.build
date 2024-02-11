@@ -116,6 +116,9 @@ conf.set_quoted('VERSION', meson.project_version())
 conf.set('PACKAGE_VERSION', meson.project_version())
 if host_machine.endian() == 'big'
   conf.set10('WORDS_BIGENDIAN', true)
+  conf.set10('BLARGG_BIG_ENDIAN', true)
+else
+  conf.set10('BLARGG_LITTLE_ENDIAN', true)
 endif
 
 

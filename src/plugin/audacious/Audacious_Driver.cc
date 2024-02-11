@@ -13,6 +13,7 @@
 #include <libaudcore/audstrings.h>
 #include <libaudcore/runtime.h>
 
+#include "Data_Reader.h"
 #include "configure.h"
 #include "plugin.h"
 #include "Music_Emu.h"
@@ -59,7 +60,7 @@ public:
 private:
     char m_header[4];
     Vfs_File_Reader vfs_in;
-    Gzip_Reader gzip_in;
+    Std_File_Reader file_in;
 };
 
 ConsoleFileHandler::ConsoleFileHandler(const char *path, VFSFile &fd)
@@ -78,11 +79,12 @@ ConsoleFileHandler::ConsoleFileHandler(const char *path, VFSFile &fd)
     vfs_in.reset(fd);
 
     // now open gzip_reader on top of vfs
-    if (log_err(gzip_in.open(&vfs_in)))
-        return;
+    // if (log_err(file_in.open(&vfs_in)))
+    //     return;
 
     // read and identify header
-    if (!log_err(gzip_in.read(m_header, sizeof(m_header))))
+    // TODO: handle zlib files
+    if (!log_err(vfs_in.read(m_header, sizeof(m_header))))
     {
         m_type = gme_identify_extension(gme_identify_header(m_header));
         if (!m_type)
@@ -112,12 +114,12 @@ int ConsoleFileHandler::load(int sample_rate)
     }
 
     // combine header with remaining file data
-    Remaining_Reader reader(m_header, sizeof(m_header), &gzip_in);
+    Remaining_Reader reader(m_header, sizeof(m_header), &vfs_in);
     if (log_err(m_emu->load(reader)))
         return 1;
 
     // files can be closed now
-    gzip_in.close();
+    // gzip_in.close();
     vfs_in.close();
 
     log_warning(m_emu);

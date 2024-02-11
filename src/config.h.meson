@@ -32,3 +32,14 @@
 #mesondefine HAVE_ADPLUG_NEMUOPL_H
 #mesondefine HAVE_ADPLUG_WEMUOPL_H
 #mesondefine HAVE_ADPLUG_KEMUOPL_H
+
+#mesondefine BLARGG_BIG_ENDIAN
+#mesondefine BLARGG_LITTLE_ENDIAN
+
+// Some settings
+#define GME_FILE_READER Vfs_File_Reader
+#define GME_FILE_READER_INCLUDE "audacious/Vfs_File.h"
+// TODO: make this user configurable
+#define VGM_YM2612_NUKED
+// TODO: make this a mesondefine
+#define HAVE_ZLIB

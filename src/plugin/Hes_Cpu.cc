@@ -1,4 +1,4 @@
-// Game_Music_Emu 0.5.5. http://www.slack.net/~ant/
+// Game_Music_Emu https://bitbucket.org/mpyne/game-music-emu/
 
 #include "Hes_Cpu.h"
 
@@ -39,7 +39,7 @@ int const ram_addr = 0x2000;
 // status flags
 int const st_n = 0x80;
 int const st_v = 0x40;
-//int const st_t = 0x20;
+/* int const st_t = 0x20; */
 int const st_b = 0x10;
 int const st_d = 0x08;
 int const st_i = 0x04;
@@ -62,6 +62,8 @@ void Hes_Cpu::reset()
 	r.a      = 0;
 	r.x      = 0;
 	r.y      = 0;
+
+	blargg_verify_byte_order();
 }
 
 void Hes_Cpu::set_mmr( int reg, int bank )
@@ -85,12 +87,6 @@ void Hes_Cpu::set_mmr( int reg, int bank )
 #define GET_SP()        ((sp - 1) & 0xFF)
 #define PUSH( v )       ((sp = (sp - 1) | 0x100), WRITE_LOW( sp, v ))
 
-// even on x86, using short and unsigned char was slower
-typedef int         fint16;
-typedef unsigned    fuint16;
-typedef unsigned    fuint8;
-typedef blargg_long fint32;
-
 bool Hes_Cpu::run( hes_time_t end_time )
 {
 	bool illegal_encountered = false;
@@ -98,14 +94,14 @@ bool Hes_Cpu::run( hes_time_t end_time )
 	state_t s = this->state_;
 	this->state = &s;
 	// even on x86, using s.time in place of s_time was slower
-	fint16 s_time = s.time;
+	blargg_long s_time = s.time;
 
 	// registers
-	fuint16 pc = r.pc;
-	fuint8 a = r.a;
-	fuint8 x = r.x;
-	fuint8 y = r.y;
-	fuint16 sp;
+	uint_fast16_t pc = r.pc;
+	uint_fast8_t a = r.a;
+	uint_fast8_t x = r.x;
+	uint_fast8_t y = r.y;
+	uint_fast16_t sp;
 	SET_SP( r.sp );
 
 	#define IS_NEG (nz & 0x8080)
@@ -124,11 +120,11 @@ bool Hes_Cpu::run( hes_time_t end_time )
 		nz |= ~in & st_z;\
 	} while ( 0 )
 
-	fuint8 status;
-	fuint16 c;  // carry set if (c & 0x100) != 0
-	fuint16 nz; // Z set if (nz & 0xFF) == 0, N set if (nz & 0x8080) != 0
+	uint_fast8_t status;
+	uint_fast16_t c;  // carry set if (c & 0x100) != 0
+	uint_fast16_t nz; // Z set if (nz & 0xFF) == 0, N set if (nz & 0x8080) != 0
 	{
-		fuint8 temp = r.status;
+		uint_fast8_t temp = r.status;
 		SET_STATUS( temp );
 	}
 
@@ -157,7 +153,7 @@ loop:
 	check( (unsigned) x < 0x100 );
 
 	uint8_t const* instr = s.code_map [pc >> page_shift];
-	fuint8 opcode;
+	uint_fast8_t opcode;
 
 	// TODO: eliminate this special case
 	#if BLARGG_NONPORTABLE
@@ -191,7 +187,7 @@ loop:
 		4,7,7,17,2,4,6,7,2,5,4,2,2,5,7,6 // F
 	}; // 0x00 was 8
 
-	fuint16 data;
+	uint_fast16_t data;
 	data = clock_table [opcode];
 	if ( (s_time += data) >= 0 )
 		goto possibly_out_of_time;
@@ -228,7 +224,7 @@ possibly_out_of_time:
 // TODO: more efficient way to handle negative branch that wraps PC around
 #define BRANCH( cond )\
 {\
-	fint16 offset = (int8_t) data;\
+	int_fast16_t offset = (int8_t) data;\
 	pc++;\
 	if ( !(cond) ) goto branch_not_taken;\
 	pc = uint16_t (pc + offset);\
@@ -266,6 +262,7 @@ possibly_out_of_time:
 	case 0xFF:
 		if ( pc == idle_addr + 1 )
 			goto idle_done;
+		// FALLTHRU
 	case 0x0F: // BBRn
 	case 0x1F:
 	case 0x2F:
@@ -281,7 +278,7 @@ possibly_out_of_time:
 	case 0xCF:
 	case 0xDF:
 	case 0xEF: {
-		fuint16 t = 0x101 * READ_LOW( data );
+		uint_fast16_t t = 0x101 * READ_LOW( data );
 		t ^= 0xFF;
 		pc++;
 		data = GET_MSB();
@@ -293,7 +290,7 @@ possibly_out_of_time:
 		goto loop;
 
 	case 0x7C: // JMP (ind+X)
-		data += x;
+		data += x; // FALLTHRU
 	case 0x6C:{// JMP (ind)
 		data += 0x100 * GET_MSB();
 		pc = GET_LE16( &READ_PROG( data ) );
@@ -309,7 +306,7 @@ possibly_out_of_time:
 		goto branch_taken;
 
 	case 0x20: { // JSR
-		fuint16 temp = pc + 1;
+		uint_fast16_t temp = pc + 1;
 		pc = GET_ADDR();
 		WRITE_LOW( 0x100 | (sp - 1), temp >> 8 );
 		sp = (sp - 2) | 0x100;
@@ -330,7 +327,7 @@ possibly_out_of_time:
 
 	case 0xBD:{// LDA abs,X
 		PAGE_CROSS_PENALTY( data + x );
-		fuint16 addr = GET_ADDR() + x;
+		uint_fast16_t addr = GET_ADDR() + x;
 		pc += 2;
 		CPU_READ_FAST( this, addr, TIME, nz );
 		a = nz;
@@ -338,21 +335,21 @@ possibly_out_of_time:
 	}
 
 	case 0x9D:{// STA abs,X
-		fuint16 addr = GET_ADDR() + x;
+		uint_fast16_t addr = GET_ADDR() + x;
 		pc += 2;
 		CPU_WRITE_FAST( this, addr, a, TIME );
 		goto loop;
 	}
 
 	case 0x95: // STA zp,x
-		data = uint8_t (data + x);
+		data = uint8_t (data + x); // FALLTHRU
 	case 0x85: // STA zp
 		pc++;
 		WRITE_LOW( data, a );
 		goto loop;
 
 	case 0xAE:{// LDX abs
-		fuint16 addr = GET_ADDR();
+		uint_fast16_t addr = GET_ADDR();
 		pc += 2;
 		CPU_READ_FAST( this, addr, TIME, nz );
 		x = nz;
@@ -367,7 +364,7 @@ possibly_out_of_time:
 // Load/store
 
 	{
-		fuint16 addr;
+		uint_fast16_t addr;
 	case 0x91: // STA (ind),Y
 		addr = 0x100 * READ_LOW( uint8_t (data + 1) );
 		addr += READ_LOW( data ) + y;
@@ -393,7 +390,7 @@ possibly_out_of_time:
 	}
 
 	{
-		fuint16 addr;
+		uint_fast16_t addr;
 	case 0xA1: // LDA (ind,X)
 		data = uint8_t (data + x);
 	case 0xB2: // LDA (ind)
@@ -423,7 +420,7 @@ possibly_out_of_time:
 
 	case 0xBE:{// LDX abs,y
 		PAGE_CROSS_PENALTY( data + y );
-		fuint16 addr = GET_ADDR() + y;
+		uint_fast16_t addr = GET_ADDR() + y;
 		pc += 2;
 		FLUSH_TIME();
 		x = nz = READ( addr );
@@ -445,9 +442,9 @@ possibly_out_of_time:
 // Bit operations
 
 	case 0x3C: // BIT abs,x
-		data += x;
+		data += x; // FALLTHRU
 	case 0x2C:{// BIT abs
-		fuint16 addr;
+		uint_fast16_t addr;
 		ADD_PAGE( addr );
 		FLUSH_TIME();
 		nz = READ( addr );
@@ -455,9 +452,9 @@ possibly_out_of_time:
 		goto bit_common;
 	}
 	case 0x34: // BIT zp,x
-		data = uint8_t (data + x);
+		data = uint8_t (data + x); // FALLTHRU
 	case 0x24: // BIT zp
-		data = READ_LOW( data );
+		data = READ_LOW( data ); // FALLTHRU
 	case 0x89: // BIT imm
 		nz = data;
 	bit_common:
@@ -470,7 +467,7 @@ possibly_out_of_time:
 		goto loop;
 
 	{
-		fuint16 addr;
+		uint_fast16_t addr;
 
 	case 0xB3: // TST abs,x
 		addr = GET_MSB() + x;
@@ -503,7 +500,7 @@ possibly_out_of_time:
 		goto loop;
 
 	{
-		fuint16 addr;
+		uint_fast16_t addr;
 	case 0x0C: // TSB abs
 	case 0x1C: // TRB abs
 		addr = GET_ADDR();
@@ -554,7 +551,7 @@ possibly_out_of_time:
 // Load/store
 
 	case 0x9E: // STZ abs,x
-		data += x;
+		data += x; // FALLTHRU
 	case 0x9C: // STZ abs
 		ADD_PAGE( data );
 		pc++;
@@ -564,30 +561,30 @@ possibly_out_of_time:
 		goto loop;
 
 	case 0x74: // STZ zp,x
-		data = uint8_t (data + x);
+		data = uint8_t (data + x); // FALLTHRU
 	case 0x64: // STZ zp
 		pc++;
 		WRITE_LOW( data, 0 );
 		goto loop;
 
 	case 0x94: // STY zp,x
-		data = uint8_t (data + x);
+		data = uint8_t (data + x); // FALLTHRU
 	case 0x84: // STY zp
 		pc++;
 		WRITE_LOW( data, y );
 		goto loop;
 
 	case 0x96: // STX zp,y
-		data = uint8_t (data + y);
+		data = uint8_t (data + y); // FALLTHRU
 	case 0x86: // STX zp
 		pc++;
 		WRITE_LOW( data, x );
 		goto loop;
 
 	case 0xB6: // LDX zp,y
-		data = uint8_t (data + y);
+		data = uint8_t (data + y); // FALLTHRU
 	case 0xA6: // LDX zp
-		data = READ_LOW( data );
+		data = READ_LOW( data ); // FALLTHRU
 	case 0xA2: // LDX #imm
 		pc++;
 		x = data;
@@ -595,9 +592,9 @@ possibly_out_of_time:
 		goto loop;
 
 	case 0xB4: // LDY zp,x
-		data = uint8_t (data + x);
+		data = uint8_t (data + x); // FALLTHRU
 	case 0xA4: // LDY zp
-		data = READ_LOW( data );
+		data = READ_LOW( data ); // FALLTHRU
 	case 0xA0: // LDY #imm
 		pc++;
 		y = data;
@@ -607,8 +604,9 @@ possibly_out_of_time:
 	case 0xBC: // LDY abs,X
 		data += x;
 		PAGE_CROSS_PENALTY( data );
+		// FALLTHRU
 	case 0xAC:{// LDY abs
-		fuint16 addr = data + 0x100 * GET_MSB();
+		uint_fast16_t addr = data + 0x100 * GET_MSB();
 		pc += 2;
 		FLUSH_TIME();
 		y = nz = READ( addr );
@@ -617,7 +615,7 @@ possibly_out_of_time:
 	}
 
 	{
-		fuint8 temp;
+		uint_fast8_t temp;
 	case 0x8C: // STY abs
 		temp = y;
 		goto store_abs;
@@ -625,7 +623,7 @@ possibly_out_of_time:
 	case 0x8E: // STX abs
 		temp = x;
 	store_abs:
-		fuint16 addr = GET_ADDR();
+		uint_fast16_t addr = GET_ADDR();
 		pc += 2;
 		FLUSH_TIME();
 		WRITE( addr, temp );
@@ -636,7 +634,7 @@ possibly_out_of_time:
 // Compare
 
 	case 0xEC:{// CPX abs
-		fuint16 addr = GET_ADDR();
+		uint_fast16_t addr = GET_ADDR();
 		pc++;
 		FLUSH_TIME();
 		data = READ( addr );
@@ -645,7 +643,7 @@ possibly_out_of_time:
 	}
 
 	case 0xE4: // CPX zp
-		data = READ_LOW( data );
+		data = READ_LOW( data ); // FALLTHRU
 	case 0xE0: // CPX #imm
 	cpx_data:
 		nz = x - data;
@@ -655,7 +653,7 @@ possibly_out_of_time:
 		goto loop;
 
 	case 0xCC:{// CPY abs
-		fuint16 addr = GET_ADDR();
+		uint_fast16_t addr = GET_ADDR();
 		pc++;
 		FLUSH_TIME();
 		data = READ( addr );
@@ -664,7 +662,7 @@ possibly_out_of_time:
 	}
 
 	case 0xC4: // CPY zp
-		data = READ_LOW( data );
+		data = READ_LOW( data ); // FALLTHRU
 	case 0xC0: // CPY #imm
 	cpy_data:
 		nz = y - data;
@@ -677,18 +675,18 @@ possibly_out_of_time:
 
 #define ARITH_ADDR_MODES( op )\
 	case op - 0x04: /* (ind,x) */\
-		data = uint8_t (data + x);\
+		data = uint8_t (data + x);/*FALLTHRU*/\
 	case op + 0x0D: /* (ind) */\
 		data = 0x100 * READ_LOW( uint8_t (data + 1) ) + READ_LOW( data );\
 		goto ptr##op;\
 	case op + 0x0C:{/* (ind),y */\
-		fuint16 temp = READ_LOW( data ) + y;\
+		uint_fast16_t temp = READ_LOW( data ) + y;\
 		PAGE_CROSS_PENALTY( temp );\
 		data = temp + 0x100 * READ_LOW( uint8_t (data + 1) );\
 		goto ptr##op;\
 	}\
 	case op + 0x10: /* zp,X */\
-		data = uint8_t (data + x);\
+		data = uint8_t (data + x);/*FALLTHRU*/\
 	case op + 0x00: /* zp */\
 		data = READ_LOW( data );\
 		goto imm##op;\
@@ -697,14 +695,15 @@ possibly_out_of_time:
 		goto ind##op;\
 	case op + 0x18: /* abs,X */\
 		data += x;\
-	ind##op:\
-		PAGE_CROSS_PENALTY( data );\
+		goto ind##op;/*WORKAROUND: Mute a fallthrough warning*/\
+	ind##op:/*FALLTHRU*/\
+		PAGE_CROSS_PENALTY( data );/*FALLTHRU*/\
 	case op + 0x08: /* abs */\
-		ADD_PAGE( data );\
+		ADD_PAGE( data );/*FALLTHRU*/\
 	ptr##op:\
 		FLUSH_TIME();\
 		data = READ( data );\
-		CACHE_TIME();\
+		CACHE_TIME();/*FALLTHRU*/\
 	case op + 0x04: /* imm */\
 	imm##op:
 
@@ -737,11 +736,12 @@ possibly_out_of_time:
 		goto adc_imm;
 
 	ARITH_ADDR_MODES( 0x65 ) // ADC
+		/*FALLTHRU*/
 	adc_imm: {
 		if ( status & st_d )
 			debug_printf( "Decimal mode not supported\n" );
-		fint16 carry = c >> 8 & 1;
-		fint16 ov = (a ^ 0x80) + carry + (int8_t) data; // sign-extend
+		int_fast16_t carry = c >> 8 & 1;
+		int_fast16_t ov = (a ^ 0x80) + carry + (int8_t) data; // sign-extend
 		status &= ~st_v;
 		status |= ov >> 2 & 0x40;
 		c = nz = a + data + carry;
@@ -753,7 +753,7 @@ possibly_out_of_time:
 // Shift/rotate
 
 	case 0x4A: // LSR A
-		c = 0;
+		c = 0; // FALLTHRU
 	case 0x6A: // ROR A
 		nz = c >> 1 & 0x80;
 		c = a << 8;
@@ -769,7 +769,7 @@ possibly_out_of_time:
 
 	case 0x2A: { // ROL A
 		nz = a << 1;
-		fint16 temp = c >> 8 & 1;
+		int_fast16_t temp = c >> 8 & 1;
 		c = nz;
 		nz |= temp;
 		a = (uint8_t) nz;
@@ -777,9 +777,9 @@ possibly_out_of_time:
 	}
 
 	case 0x5E: // LSR abs,X
-		data += x;
+		data += x;/*FALLTHRU*/
 	case 0x4E: // LSR abs
-		c = 0;
+		c = 0;/*FALLTHRU*/
 	case 0x6E: // ROR abs
 	ror_abs: {
 		ADD_PAGE( data );
@@ -795,9 +795,9 @@ possibly_out_of_time:
 		goto rol_abs;
 
 	case 0x1E: // ASL abs,X
-		data += x;
+		data += x;/*FALLTHRU*/
 	case 0x0E: // ASL abs
-		c = 0;
+		c = 0;/*FALLTHRU*/
 	case 0x2E: // ROL abs
 	rol_abs:
 		ADD_PAGE( data );
@@ -819,9 +819,9 @@ possibly_out_of_time:
 		goto ror_zp;
 
 	case 0x56: // LSR zp,x
-		data = uint8_t (data + x);
+		data = uint8_t (data + x);/*FALLTHRU*/
 	case 0x46: // LSR zp
-		c = 0;
+		c = 0;/*FALLTHRU*/
 	case 0x66: // ROR zp
 	ror_zp: {
 		int temp = READ_LOW( data );
@@ -835,9 +835,9 @@ possibly_out_of_time:
 		goto rol_zp;
 
 	case 0x16: // ASL zp,x
-		data = uint8_t (data + x);
+		data = uint8_t (data + x);/*FALLTHRU*/
 	case 0x06: // ASL zp
-		c = 0;
+		c = 0;/*FALLTHRU*/
 	case 0x26: // ROL zp
 	rol_zp:
 		nz = c >> 8 & 1;
@@ -867,15 +867,15 @@ possibly_out_of_time:
 		INC_DEC_AXY( y, -1 )
 
 	case 0xF6: // INC zp,x
-		data = uint8_t (data + x);
+		data = uint8_t (data + x);/*FALLTHRU*/
 	case 0xE6: // INC zp
 		nz = 1;
 		goto add_nz_zp;
 
 	case 0xD6: // DEC zp,x
-		data = uint8_t (data + x);
+		data = uint8_t (data + x);/*FALLTHRU*/
 	case 0xC6: // DEC zp
-		nz = (unsigned) -1;
+		nz = (uint_fast16_t)-1;
 	add_nz_zp:
 		nz += READ_LOW( data );
 	write_nz_zp:
@@ -900,7 +900,7 @@ possibly_out_of_time:
 	case 0xCE: // DEC abs
 		data = GET_ADDR();
 	dec_ptr:
-		nz = (unsigned) -1;
+		nz = (uint_fast16_t) -1;
 	inc_common:
 		FLUSH_TIME();
 		nz += READ( data );
@@ -940,7 +940,7 @@ possibly_out_of_time:
 		goto loop;
 
 	#define SWAP_REGS( r1, r2 ) {\
-		fuint8 t = r1;\
+		uint_fast8_t t = r1;\
 		r1 = r2;\
 		r2 = t;\
 		goto loop;\
@@ -982,7 +982,7 @@ possibly_out_of_time:
 		goto loop;
 
 	case 0x40:{// RTI
-		fuint8 temp = READ_LOW( sp );
+		uint_fast8_t temp = READ_LOW( sp );
 		pc  = READ_LOW( 0x100 | (sp - 0xFF) );
 		pc |= READ_LOW( 0x100 | (sp - 0xFE) ) * 0x100;
 		sp = (sp - 0xFD) | 0x100;
@@ -1016,8 +1016,8 @@ possibly_out_of_time:
 		goto loop;
 
 	case 0x28:{// PLP
-		fuint8 temp = POP();
-		fuint8 changed = status ^ temp;
+		uint_fast8_t temp = POP();
+		uint_fast8_t changed = status ^ temp;
 		SET_STATUS( temp );
 		if ( !(changed & st_i) )
 			goto loop; // I flag didn't change
@@ -1028,7 +1028,7 @@ possibly_out_of_time:
 	#undef POP
 
 	case 0x08: { // PHP
-		fuint8 temp;
+		uint_fast8_t temp;
 		CALC_STATUS( temp );
 		PUSH( temp | st_b );
 		goto loop;
@@ -1037,7 +1037,7 @@ possibly_out_of_time:
 // Flags
 
 	case 0x38: // SEC
-		c = (unsigned) ~0;
+		c = (uint_fast16_t) ~0;
 		goto loop;
 
 	case 0x18: // CLC
@@ -1105,7 +1105,7 @@ possibly_out_of_time:
 // Special
 
 	case 0x53:{// TAM
-		fuint8 const bits = data; // avoid using data across function call
+		uint_fast8_t const bits = data; // avoid using data across function call
 		pc++;
 		for ( int i = 0; i < 8; i++ )
 			if ( bits & (1 << i) )
@@ -1129,7 +1129,7 @@ possibly_out_of_time:
 	case 0x03: // ST0
 	case 0x13: // ST1
 	case 0x23:{// ST2
-		fuint16 addr = opcode >> 4;
+		uint_fast16_t addr = opcode >> 4;
 		if ( addr )
 			addr++;
 		pc++;
@@ -1163,10 +1163,10 @@ possibly_out_of_time:
 // Block transfer
 
 	{
-		fuint16 in_alt;
-		fint16 in_inc;
-		fuint16 out_alt;
-		fint16 out_inc;
+		uint_fast16_t in_alt;
+		int_fast16_t in_inc;
+		uint_fast16_t out_alt;
+		int_fast16_t out_inc;
 
 	case 0xE3: // TIA
 		in_alt  = 0;
@@ -1197,8 +1197,8 @@ possibly_out_of_time:
 		in_alt  = 0;
 		out_alt = 0;
 	bxfer:
-		fuint16 in    = GET_LE16( instr + 0 );
-		fuint16 out   = GET_LE16( instr + 2 );
+		uint_fast16_t in    = GET_LE16( instr + 0 );
+		uint_fast16_t out   = GET_LE16( instr + 2 );
 		int     count = GET_LE16( instr + 4 );
 		if ( !count )
 			count = 0x10000;
@@ -1210,7 +1210,7 @@ possibly_out_of_time:
 		do
 		{
 			// TODO: reads from $0800-$1400 in I/O page return 0 and don't access I/O
-			fuint8 t = READ( in );
+			uint_fast8_t t = READ( in );
 			in += in_inc;
 			in &= 0xFFFF;
 			s.time += 6;
@@ -1230,7 +1230,6 @@ possibly_out_of_time:
 // Illegal
 
 	default:
-		assert( (unsigned) opcode <= 0xFF );
 		debug_printf( "Illegal opcode $%02X at $%04X\n", (int) opcode, (int) pc - 1 );
 		illegal_encountered = true;
 		goto loop;
@@ -1251,7 +1250,7 @@ interrupt:
 		pc = GET_LE16( &READ_PROG( 0xFFF0 ) + result_ );
 
 		sp = (sp - 3) | 0x100;
-		fuint8 temp;
+		uint_fast8_t temp;
 		CALC_STATUS( temp );
 		if ( result_ == 6 )
 			temp |= st_b;
@@ -1288,7 +1287,7 @@ out_of_time:
 	r.y = y;
 
 	{
-		fuint8 temp;
+		uint_fast8_t temp;
 		CALC_STATUS( temp );
 		r.status = temp;
 	}
@@ -1298,4 +1297,3 @@ out_of_time:
 
 	return illegal_encountered;
 }
-

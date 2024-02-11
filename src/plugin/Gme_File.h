@@ -1,6 +1,6 @@
 // Common interface to game music file loading and information
 
-// Game_Music_Emu 0.5.5
+// Game_Music_Emu https://bitbucket.org/mpyne/game-music-emu/
 #ifndef GME_FILE_H
 #define GME_FILE_H
 
@@ -32,15 +32,29 @@ struct track_info_t
 	long length;
 	long intro_length;
 	long loop_length;
+	long fade_length;
+	long repeat_count;
+
+	/* Length if available, otherwise intro_length+loop_length*2 if available,
+	 * otherwise a default of 150000 (2.5 minutes) */
+	long play_length;
 
 	/* empty string if not available */
 	char system    [256];
 	char game      [256];
 	char song      [256];
 	char author    [256];
+	char composer  [256];
+	char engineer  [256];
+	char sequencer [256];
+	char tagger    [256];
 	char copyright [256];
+	char date      [256];
 	char comment   [256];
 	char dumper    [256];
+	char disc      [256];
+	char track     [256];
+	char ost       [256];
 };
 enum { gme_max_field = 255 };
 
@@ -76,7 +90,7 @@ public:
 	// is an NSFE emulator, and you can cast to an Nsfe_Emu* if necessary.
 	gme_type_t type() const;
 
-	// Most recent warning string, or nullptr if none. Clears current warning after
+	// Most recent warning string, or NULL if none. Clears current warning after
 	// returning.
 	const char* warning();
 
@@ -94,9 +108,12 @@ public:
 	void set_user_data( void* p )       { user_data_ = p; }
 	void* user_data() const             { return user_data_; }
 
-	// Register cleanup function to be called when deleting emulator, or nullptr to
+	// Register cleanup function to be called when deleting emulator, or NULL to
 	// clear it. Passes user_data to cleanup function.
 	void set_user_cleanup( gme_user_cleanup_t func ) { user_cleanup_ = func; }
+
+	bool is_archive = false;
+	virtual blargg_err_t load_archive( const char* ) { return gme_wrong_file_type; }
 
 public:
 	// deprecated
@@ -104,6 +121,7 @@ public:
 public:
 	Gme_File();
 	virtual ~Gme_File();
+	BLARGG_DISABLE_NOTHROW
 	typedef uint8_t byte;
 protected:
 	// Services
@@ -153,7 +171,7 @@ Music_Emu* gme_new_( Music_Emu*, long sample_rate );
 	{ Gme_File::copy_field_( out->name, in.name, sizeof in.name ); }
 
 #ifndef GME_FILE_READER
-	#define GME_FILE_READER Gzip_File_Reader
+	#define GME_FILE_READER Std_File_Reader
 #elif defined (GME_FILE_READER_INCLUDE)
 	#include GME_FILE_READER_INCLUDE
 #endif

@@ -1,6 +1,6 @@
 // Atari XL/XE SAP music file emulator
 
-// Game_Music_Emu 0.5.5
+// Game_Music_Emu https://bitbucket.org/mpyne/game-music-emu/
 #ifndef SAP_EMU_H
 #define SAP_EMU_H
 
@@ -24,9 +24,7 @@ public:
 		int  type;
 		int  track_count;
 		int  fastplay;
-		int  length;
 		bool stereo;
-		bool ntsc;
 		char author    [256];
 		char name      [256];
 		char copyright [ 32];
@@ -45,22 +43,21 @@ public: private: friend class Sap_Cpu;
 	void cpu_write_( sap_addr_t, int );
 private:
 	info_t info;
-
+	
 	byte const* file_end;
 	sap_time_t scanline_period;
 	sap_time_t next_play;
 	sap_time_t time_mask;
 	Sap_Apu apu;
 	Sap_Apu apu2;
-
+	
 	// large items
 	struct {
 		byte padding1 [0x100];
-		byte ram [0x10000];
-		byte padding2 [0x100];
+		byte ram [0x10000 + 0x100];
 	} mem;
 	Sap_Apu_Impl apu_impl;
-
+	
 	sap_time_t play_period() const;
 	void call_play();
 	void cpu_jsr( sap_addr_t );

@@ -51,10 +51,10 @@ gme_sources = [
 
 
 plugin_sources = [
-  'Vfs_File.cc',
-  'Audacious_Driver.cc',
-  'configure.cc',
-  'plugin.cc'
+  'audacious/Vfs_File.cc',
+  'audacious/Audacious_Driver.cc',
+  'audacious/configure.cc',
+  'audacious/plugin.cc'
 ]
 
 

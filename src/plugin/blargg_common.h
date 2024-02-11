@@ -14,7 +14,7 @@
 
 // Have GME use VFS file access
 #define GME_FILE_READER Vfs_File_Reader
-#define GME_FILE_READER_INCLUDE "Vfs_File.h"
+#define GME_FILE_READER_INCLUDE "audacious/Vfs_File.h"
 
 #define STATIC_CAST(T,expr) static_cast<T>(expr)
 

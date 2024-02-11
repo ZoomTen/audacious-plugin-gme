@@ -23,7 +23,7 @@ public:
     static const PluginPreferences prefs;
 
     static constexpr PluginInfo info = {
-        N_("Game Console Music Decoder"),
+        N_("Game Music Emu Plugin"),
         PACKAGE,
         about,
         & prefs

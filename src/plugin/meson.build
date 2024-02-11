@@ -63,7 +63,7 @@ cpp_args = cxx.get_supported_arguments([
 ])
 
 
-shared_module('console',
+shared_module('gme',
   gme_sources,
   plugin_sources,
   dependencies: [audacious_dep, zlib_dep],

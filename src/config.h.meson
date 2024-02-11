@@ -1,0 +1,34 @@
+#mesondefine PACKAGE
+#mesondefine VERSION
+#mesondefine COPYRIGHT
+#mesondefine EXPORT
+#mesondefine PLUGIN_SUFFIX
+
+#define PACKAGE_VERSION VERSION
+#define ICONV_CONST
+
+#mesondefine HAVE_GETTEXT
+
+#mesondefine INSTALL_BINDIR
+#mesondefine INSTALL_DATADIR
+#mesondefine INSTALL_PLUGINDIR
+#mesondefine INSTALL_LOCALEDIR
+#mesondefine INSTALL_DESKTOPFILE
+#mesondefine INSTALL_ICONFILE
+
+#mesondefine USE_QT
+#mesondefine USE_GTK
+#mesondefine USE_GTK3
+#mesondefine USE_GTK_OR_QT
+
+#define GLIB_VERSION_MIN_REQUIRED GLIB_VERSION_2_32
+
+#mesondefine FILEWRITER_MP3
+#mesondefine FILEWRITER_FLAC
+#mesondefine FILEWRITER_VORBIS
+
+#mesondefine HAVE_LIBCUE2
+
+#mesondefine HAVE_ADPLUG_NEMUOPL_H
+#mesondefine HAVE_ADPLUG_WEMUOPL_H
+#mesondefine HAVE_ADPLUG_KEMUOPL_H

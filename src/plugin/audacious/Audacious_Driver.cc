@@ -183,6 +183,8 @@ bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, 
     set_str(Tuple::Copyright, info.copyright);
     set_str(Tuple::Codec, info.system);
     set_str(Tuple::Comment, info.comment);
+    set_str(Tuple::Date, info.date);
+    set_str(Tuple::Composer, info.composer);
 
     if (fh.m_track >= 0)
     {

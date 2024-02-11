@@ -12,7 +12,7 @@
 EXPORT ConsolePlugin aud_plugin_instance;
 
 const char ConsolePlugin::about[] =
- N_("Console music decoder engine based on Game_Music_Emu 0.5.2\n"
+ N_("Console music decoder engine based on Game_Music_Emu 0.6.4\n"
     "Supported formats: AY, GBS, GYM, HES, KSS, NSF, NSFE, SAP, SPC, VGM, VGZ\n\n"
     "Audacious plugin by:\n"
     "William Pitcock <nenolod@dereferenced.org>\n"

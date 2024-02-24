@@ -124,6 +124,7 @@ int ConsoleFileHandler::load(int sample_rate)
 
     log_warning(m_emu);
 
+
 #if 0
     // load .m3u from same directory( replace/add extension with ".m3u")
     char *m3u_path = g_strdup(m_path);
@@ -160,12 +161,85 @@ static int get_track_length(const track_info_t &info)
     return length;
 }
 
+static char *skip_spaces(char *i)
+{
+    while(
+        (*i == ' ') ||
+        (*i == '\t')
+    ){
+        i++;
+    }
+    return i;
+}
+
+static char *skip_current_line(char *i)
+{
+    // assumes windows/unix line endings!
+    while(
+        (*i != '\n')
+    ){
+        i++;
+    }
+    return ++i;
+}
+
+static char *word_into_buffer(char *source, char *buffer, size_t max_size)
+{
+    size_t i = 0;
+    while (
+        (*source != ' ') &&
+        (*source != '\t') &&
+        (*source != '\r') &&
+        (*source != '\n')
+    ){
+        if (++i == max_size)
+        {
+            break;
+        }
+        *buffer++ = *source++;
+    }
+    *buffer = '\0';
+    return source;
+}
+
+static char *into_buffer_until_newline(char *source, char *buffer, size_t max_size)
+{
+    size_t i = 0;
+    // also assumes windows/unix line endings!
+    while ((*source != '\n') && (*source != '\r')){
+        if (++i == max_size)
+        {
+            break;
+        }
+        *buffer++ = *source++;
+    }
+    *buffer = '\0';
+    return source;
+}
+
 bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, Index<char> *image)
 {
     ConsoleFileHandler fh(filename, file);
 
+    auto set_str = [&tuple](Tuple::Field f, const char *s)
+        { if (s[0]) tuple.set_str(f, s); };
+
     if (!fh.m_type)
         return false;
+
+    // prefer !tags.m3u, if available
+    char *tags_m3u_path = strdup(fh.m_path);
+    char *ext = strrchr(tags_m3u_path, '/');
+    if (ext != nullptr)
+    {
+        // may overflow
+        sprintf(ext, "/!tags.m3u");
+    }
+    Vfs_File_Reader tags_m3u;
+    if (tags_m3u.open(tags_m3u_path))
+    {
+        AUDWARN("Couldn't find !tags.m3u, falling back on GME built-in.");
+        free(tags_m3u_path);
 
     if (fh.load(gme_info_only))
         return false;
@@ -174,8 +248,7 @@ bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, 
     if (log_err(fh.m_emu->track_info(&info, fh.m_track < 0 ? 0 : fh.m_track)))
         return false;
 
-    auto set_str = [&tuple](Tuple::Field f, const char *s)
-        { if (s[0]) tuple.set_str(f, s); };
+    
 
     set_str(Tuple::Artist, info.author);
     set_str(Tuple::Album, info.game);
@@ -197,6 +270,96 @@ bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, 
 
     tuple.set_int (Tuple::Length, get_track_length (info));
     tuple.set_int (Tuple::Channels, 2);
+
+    } else {
+        // parse !tags.m3u here, i want to keep the GME here
+        // as pristine as possible. Unless of course, the GME
+        // guys take the !tags.m3u thing idk.
+
+        char metatag[10];
+        char tag_buf[256];
+
+        tags_m3u.seek(0);
+        char *tags_buff = (char *) std::malloc(tags_m3u.size());
+        char *into_buf = tags_buff;
+        tags_m3u.read_avail(tags_buff, tags_m3u.size());
+
+        int num_subtunes = 0;
+
+        while (*into_buf != '\0')
+        {
+            into_buf = skip_spaces(into_buf);
+            if (*into_buf == '#')
+            {
+                into_buf = skip_spaces(++into_buf);
+                switch (*into_buf++) {
+                    case '@': // global tag
+                        into_buf = word_into_buffer(into_buf, metatag, 10);
+                        into_buf = skip_spaces(into_buf);
+                        into_buf = into_buffer_until_newline(into_buf, tag_buf, 256);
+                        if (!strcmp_nocase(metatag, "album"))
+                        {
+                            set_str(Tuple::Album, tag_buf);
+                        } 
+                        else if (!strcmp_nocase(metatag, "company"))
+                        {
+                            set_str(Tuple::Copyright, tag_buf);
+                            set_str(Tuple::Publisher, tag_buf);
+                        } 
+                        else if (!strcmp_nocase(metatag, "artist"))
+                        {
+                            set_str(Tuple::AlbumArtist, tag_buf);
+                        } 
+                        else if (!strcmp_nocase(metatag, "year"))
+                        {
+                            int year = atoi(tag_buf);
+                            tuple.set_int(Tuple::Year, year);
+                            set_str(Tuple::Date, tag_buf);
+                        }
+                        break;
+                    case '%': // local tag
+                        into_buf = word_into_buffer(into_buf, metatag, 10);
+                        into_buf = skip_spaces(into_buf);
+                        into_buf = into_buffer_until_newline(into_buf, tag_buf, 256);
+                        if (!strcmp_nocase(metatag, "title"))
+                        {
+                            // TODO: assumes the subtunes are STRICTLY ordered!
+                            // assumes this is defined before the subtune declaration...
+                            // I should replace this with a list.
+                            if (fh.m_track == num_subtunes)
+                                set_str(Tuple::Title, tag_buf);
+                        } 
+                        else if (!strcmp_nocase(metatag, "subtune"))
+                        {
+                            int subtune_num = atoi(tag_buf);
+                            if (fh.m_track == num_subtunes)
+                            {
+                                tuple.set_int(Tuple::Track, subtune_num + 1);
+                                tuple.set_int(Tuple::Subtune, subtune_num + 1);
+                            }
+                            num_subtunes++;
+                        } 
+                        else if (!strcmp_nocase(metatag, "artist"))
+                        {
+                            // TODO: HACKYYY
+                            // assumes this is defined after the subtune declaration...
+                            if (fh.m_track == num_subtunes - 1)
+                                set_str(Tuple::Artist, tag_buf);
+                        } 
+                        break;
+                    default: // a standard comment, ignore
+                        break;
+                }
+            }
+            into_buf = skip_current_line(into_buf);
+        }
+
+        free(tags_buff);
+        
+        tuple.set_int(Tuple::NumSubtunes, num_subtunes);
+        tuple.set_subtunes(num_subtunes, nullptr);
+
+    }
 
     return true;
 }

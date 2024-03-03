@@ -40,6 +40,8 @@ public:
 
     bool read_tag (const char * filename, VFSFile & file, Tuple & tuple, Index<char> * image);
     bool play (const char * filename, VFSFile & file);
+private:
+    bool external_tags_exist = false;
 };
 
 #endif // CONSOLE_PLUGIN_H

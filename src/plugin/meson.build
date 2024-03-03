@@ -86,6 +86,13 @@ plugin_sources = [
   'audacious/plugin.cc'
 ]
 
+tag_parser_sources = [
+  'tags/libgmtag/src/libgmtag.cpp'
+]
+
+tag_parser_includes = include_directories(
+  'tags/libgmtag/include'
+)
 
 cpp_args = cxx.get_supported_arguments([
   '-Wno-shift-negative-value'
@@ -95,9 +102,11 @@ cpp_args = cxx.get_supported_arguments([
 shared_module('gme',
   gme_sources,
   plugin_sources,
+  tag_parser_sources,
   dependencies: [audacious_dep, zlib_dep],
   cpp_args: cpp_args,
   name_prefix: '',
   install: true,
-  install_dir: input_plugin_dir
+  install_dir: input_plugin_dir,
+  include_directories: tag_parser_includes
 )

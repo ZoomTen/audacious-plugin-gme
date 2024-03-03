@@ -1,0 +1,3 @@
+[submodule "src/plugin/tags"]
+	path = src/plugin/tags
+	url = https://github.com/zoomten/game-music-tagging

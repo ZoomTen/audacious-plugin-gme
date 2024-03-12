@@ -14,6 +14,7 @@
 
 #include <libaudcore/audstrings.h>
 #include <libaudcore/runtime.h>
+#include <unistd.h>
 
 #include "Data_Reader.h"
 #include "configure.h"
@@ -205,7 +206,8 @@ bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, 
 
     tuple.set_int (Tuple::Channels, 2);
 
-    if (tags_m3u.open(tags_m3u_path))
+    StringBuf tags_m3u_fn = uri_to_filename(tags_m3u_path);
+    if (access(tags_m3u_fn, R_OK) != 0)
     {
         AUDWARN("Couldn't find !tags.m3u, falling back on GME built-in.");
         free(tags_m3u_path);
@@ -227,6 +229,7 @@ bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, 
     tuple.set_int (Tuple::Length, get_track_length (info));
 
     } else {
+        tags_m3u.open(tags_m3u_path);
         // parse !tags.m3u here, i want to keep the GME here
         // as pristine as possible. Unless of course, the GME
         // guys take the !tags.m3u thing idk.

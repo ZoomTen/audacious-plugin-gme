@@ -87,7 +87,10 @@ plugin_sources = [
 ]
 
 tag_parser_sources = [
-  'tags/libgmtag/src/libgmtag.cpp'
+  'tags/libgmtag/src/libgmtag.cpp',
+  'tags/libgmtag/src/private/getters.cpp',
+  'tags/libgmtag/src/private/setters.cpp',
+  'tags/libgmtag/src/private/utils.cpp'
 ]
 
 tag_parser_includes = include_directories(

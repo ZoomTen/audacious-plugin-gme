@@ -243,41 +243,74 @@ bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, 
         tags_m3u.read_avail(tags_buff, tags_m3u.size());
 
         tags_from_buffer(tags_buff);
+        free(tags_buff);
+        tags_m3u.close();
 
-        GmTagDef global_tags = get_tags_for_subtune(0);
-        GmTagDef tags_for_this = get_tags_for_subtune(fh.m_track + 1);
+        unsigned long subtune = fh.m_track + 1;
 
-        tuple.set_int(Tuple::Track, tags_for_this.track);
-        set_str(Tuple::Album, global_tags.album);
-        set_str(Tuple::AlbumArtist, global_tags.artist);
-        set_str(Tuple::Artist, tags_for_this.artist);
-        set_str(Tuple::Title, tags_for_this.title);
-        set_str(Tuple::Comment, tags_for_this.comments);
-        set_str(Tuple::Copyright, tags_for_this.copyright);
-        set_str(Tuple::Composer, tags_for_this.composer);
-        set_str(Tuple::Performer, tags_for_this.sequencer);
-        set_str(Tuple::Publisher, tags_for_this.publisher);
-        if (tags_for_this.date.year > 0) {
-            tuple.set_int(Tuple::Year, tags_for_this.date.year);
+        char *album = get_album(0);
+        char *album_artist = get_artist(0);
+        
+        char *artist = get_artist(subtune);
+        char *title = get_title(subtune);
+        char *comments = get_comment(subtune);
+        char *copyright = get_copyright(subtune);
+        char *composer = get_composer(subtune);
+        char *sequencer = get_sequencer(subtune);
+        char *publisher = get_publisher(subtune);
+
+        GmTagDateDef date = get_date(subtune);
+
+        tuple.set_int(Tuple::Track, get_track_num(subtune));
+
+        set_str(Tuple::Album, album);
+        free(album);
+
+        set_str(Tuple::AlbumArtist, album_artist);
+        free(album_artist);
+
+        set_str(Tuple::Artist, artist);
+        free(artist);
+
+        set_str(Tuple::Title, title);
+        free(title);
+
+        set_str(Tuple::Comment, comments);
+        free(comments);
+
+        set_str(Tuple::Copyright, copyright);
+        free(copyright);
+
+        set_str(Tuple::Composer, composer);
+        free(composer);
+
+        set_str(Tuple::Performer, sequencer);
+        free(sequencer);
+
+        set_str(Tuple::Publisher, publisher);
+        free(publisher);
+
+        if (date.year > 0) {
+            tuple.set_int(Tuple::Year, date.year);
         }
         if (
-            (tags_for_this.date.year > 0) &&
-            (tags_for_this.date.month > 0) &&
-            (tags_for_this.date.day > 0)
+            (date.year > 0) &&
+            (date.month > 0) &&
+            (date.day > 0)
         ) {
             char *date_str = static_cast<char *>(malloc(30));
             sprintf(
                 date_str, "%04lu-%02u-%02u",
-                tags_for_this.date.year,
-                tags_for_this.date.month,
-                tags_for_this.date.day
+                date.year,
+                date.month,
+                date.day
             );
             set_str(Tuple::Date, date_str);
         }
 
 
-        int duration = get_length_of_subtune(fh.m_track + 1);
-        int fade_duration = get_fade_length_of_subtune(fh.m_track + 1);
+        int duration = get_length_of_subtune(subtune);
+        int fade_duration = get_fade_length_of_subtune(subtune);
 
         // if length is undefined, use GME's default
         if (duration > 0) {
@@ -289,7 +322,6 @@ bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, 
         }
 
         external_tags_exist = true;
-        free(tags_buff);
         // tuple.set_int(Tuple::NumSubtunes, num_subtunes);
         // tuple.set_subtunes(num_subtunes, nullptr);
 

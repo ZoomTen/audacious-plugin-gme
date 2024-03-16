@@ -210,7 +210,7 @@ bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, 
     if (access(tags_m3u_fn, R_OK) != 0)
     {
         AUDWARN("Couldn't find !tags.m3u, falling back on GME built-in.");
-        free(tags_m3u_path);
+        //free(tags_m3u_path);
 
     set_str(Tuple::Artist, info.author);
     set_str(Tuple::Album, info.game);

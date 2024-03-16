@@ -11,7 +11,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-
+#include <mutex>
 #include <libaudcore/audstrings.h>
 #include <libaudcore/runtime.h>
 #include <unistd.h>
@@ -26,6 +26,8 @@
 
 static const int fade_threshold = 10 * 1000;
 static const int fade_length    = 8 * 1000;
+
+std::mutex mtx;
 
 static bool log_err(blargg_err_t err)
 {
@@ -168,6 +170,8 @@ static int get_track_length(const track_info_t &info)
 
 bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, Index<char> *image)
 {
+    mtx.lock();
+
     ConsoleFileHandler fh(filename, file);
 
     auto set_str = [&tuple](Tuple::Field f, const char *s)
@@ -292,6 +296,7 @@ bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, 
         // unset_tags();        
 
     }
+    mtx.unlock();
 
     return true;
 }

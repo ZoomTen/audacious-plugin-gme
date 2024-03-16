@@ -213,7 +213,7 @@ bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, 
     StringBuf tags_m3u_fn = uri_to_filename(tags_m3u_path);
     if (access(tags_m3u_fn, R_OK) != 0)
     {
-        AUDWARN("Couldn't find !tags.m3u, falling back on GME built-in.");
+        AUDWARN("Using built-in tags (!tags.m3u not found)\n");
         //free(tags_m3u_path);
 
     set_str(Tuple::Artist, info.author);

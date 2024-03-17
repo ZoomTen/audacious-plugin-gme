@@ -287,7 +287,7 @@ bool ConsolePlugin::read_tag(const char *filename, VFSFile &file, Tuple &tuple, 
         set_str(Tuple::Performer, sequencer);
         free(sequencer);
 
-        set_str(Tuple::Publisher, publisher);
+        // set_str(Tuple::Publisher, publisher);
         free(publisher);
 
         if (date.year > 0) {

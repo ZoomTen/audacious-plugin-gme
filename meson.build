@@ -26,7 +26,7 @@ if have_darwin
 endif
 
 
-audacious_req = '>= 4.3'
+audacious_req = '>= 4.2'
 audacious_dep = dependency('audacious', version: audacious_req, required: true)
 
 
